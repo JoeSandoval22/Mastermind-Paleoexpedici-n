@@ -6,8 +6,56 @@ VRAM_SEG     EQU 0A000h
 ANCHO_PANT   EQU 320
 ALTO_PANT    EQU 200
 
+; Constantes para el manejo de las flechas del teclado
+TECLA_ARRIBA  EQU 48h
+TECLA_ABAJO   EQU 50h
+TECLA_ENTER   EQU 0Dh
+TECLA_ESC     EQU 1Bh
+ 
+; Colores iniciales del menú y opciones
+NEGRO         EQU 0
+CAFE          EQU 6
+GRIS          EQU 7
+AMARILLO      EQU 14
+BLANCO        EQU 15
+ROJO_CIELO    EQU 40
+DORADO        EQU 44
+ 
+; Constantes para elegir una opción dentro del menú mediante el teclado
+OP_JUGAR      EQU 0
+OP_NIVEL      EQU 1
+OP_INSTRUC    EQU 2
+OP_CREDITOS   EQU 3
+OP_SALIR      EQU 4
+
+; Denota el color del cursor que vendría siendo la flechita que se mueve al usar las teclas y también una constante para el color del texto.
+COL_CURSOR    EQU 13
+COL_TEXTO     EQU 15
+
 .DATA
-modoOriginal db ?       
+; Variable que recupera el modo de pantalla
+modoOriginal db ?  
+; Variable global para manejar el menú de opciones
+opcionActual db 0  
+
+; Coordenadas para manejar la ubicación de los objetos en el menú
+rectX         dw ?
+rectY         dw ?
+rectAncho     dw ?
+rectAlto      dw ?
+rectColor     db ?
+ 
+; Textos del menu
+txtTitulo     db 'VIVOS Y FOSILES$'
+txtSubtitulo  db 'MASTERMIND PREHISTORICO$'
+txtJugar      db 'JUGAR$'
+txtNivel      db 'NIVEL$'
+txtInstruc    db 'INSTRUCCIONES$'
+txtCreditos   db 'CREDITOS$'
+txtSalir      db 'SALIR$'
+txtAyuda      db 'FLECHAS: MOVER    ENTER: ELEGIR$'
+txtObras      db 'EN CONSTRUCCION$'
+txtTecla      db 'PRESIONE UNA TECLA$'
 
 .CODE
 
