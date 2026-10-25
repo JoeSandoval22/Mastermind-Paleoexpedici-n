@@ -2,7 +2,7 @@
 .STACK 200h             
 
 ; Constantes para las dimensiones de la pantalla y el segmento donde empieza al memoria de video. Las dimensiones corresponden al tamaño del DOS Box.
-VRAM_SEG     EQU 0A000h 
+PANTALLA     EQU 0A000h 
 ANCHO_PANT   EQU 320
 ALTO_PANT    EQU 200
 
@@ -89,26 +89,48 @@ RestaurarVideo PROC
 RestaurarVideo ENDP
 
 
-LimpiarPantalla PROC
+LlenarRect PROC
     push ax
+    push bx
     push cx
+    push dx
     push di
     push es
-
-    mov ah, al                 
-    mov cx, VRAM_SEG
-    mov es, cx                 
-    xor di, di                  
-    mov cx, (ANCHO_PANT*ALTO_PANT)/2  
-    cld                         
-    rep stosw                   
-
+ 
+    mov ax, PANTALLA
+    mov es, ax
+ 
+    mov ax, rectY
+    mov bx, ANCHO_PANT
+    mul bx
+    add ax, rectX
+    mov di, ax
+ 
+    mov bx, ANCHO_PANT
+    sub bx, rectAncho
+ 
+    mov al, rectColor
+    mov dx, rectAlto
+ 
+LR_Fila:
+    mov cx, rectAncho
+LR_Pixel:
+    mov es:[di], al
+    inc di
+    loop LR_Pixel
+ 
+    add di, bx
+    dec dx
+    jnz LR_Fila
+ 
     pop es
     pop di
+    pop dx
     pop cx
+    pop bx
     pop ax
     ret
-LimpiarPantalla ENDP
+LlenarRect ENDP
 
 ; Este método se encuentra a la espera del uso de una tecla, mantiene el control mediante el uso de la interrupción 16h y sus funciones internas
 EsperarTecla PROC
@@ -120,18 +142,22 @@ EsperarTecla ENDP
 ; Función principal que vendría siendo el MAIN, llama a los demás métodos que ayudan a iniciar el juego, de momento solo se muestra una pantalla en color azul, esto solo es el esqueleto principal del programa.
 Inicio:
     mov ax, @data
-    mov ds, ax                  
+    mov ds, ax
 
     call IniciarVideo
+    mov rectX, 100
+    mov rectY, 50
+    mov rectAncho, 120
+    mov rectAlto, 80
+    mov rectColor, AMARILLO
+    call LlenarRect
 
-    mov al, 1                   
-    call LimpiarPantalla
-
-    call EsperarTecla
+    mov ah, 00h
+    int 16h
 
     call RestaurarVideo         
+    mov ah, 04Ch
 
-    mov ax, 4C00h              
+    mov al, 0             
     int 21h
-
 END Inicio                     
