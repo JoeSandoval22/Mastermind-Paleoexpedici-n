@@ -11,7 +11,7 @@ modoOriginal db ?
 
 .CODE
 
-; Esta función se encarga de iniciar el programa en modo gráfico una vez que se ejecute el juego. Lo hace por medio de consultas con la función OFh. De esta forma podremos estar en el modo gráfico 13h siempre.
+; Esta función se encarga de iniciar el programa en modo gráfico una vez que se ejecute el juego. Lo hace por medio de consultas con la función OFh. De esta forma podremos estar en el modo gráfico 13h siempre
 IniciarVideo PROC
     push ax
     push bx                     
@@ -28,7 +28,7 @@ IniciarVideo PROC
     ret
 IniciarVideo ENDP
 
-; Esta función se encarga de restaurar los modos anteriores para mantener el dinamismo del juego y no se pierda nada. La variable 'modoOriginal' es la encargada de reservar el modo anterior en memoria para que pueda ser recuperado.
+; Esta función se encarga de restaurar los modos anteriores para mantener el dinamismo del juego y no se pierda nada. La variable 'modoOriginal' es la encargada de reservar el modo anterior en memoria para que pueda ser recuperado
 RestaurarVideo PROC
     push ax
 
@@ -62,7 +62,7 @@ LimpiarPantalla PROC
     ret
 LimpiarPantalla ENDP
 
-; Este método se encuentra a la espera del uso de una tecla, mantiene el control mediante el uso de la interrupción 16h y sus funciones internas.
+; Este método se encuentra a la espera del uso de una tecla, mantiene el control mediante el uso de la interrupción 16h y sus funciones internas
 EsperarTecla PROC
     mov ah, 00h                 
     int 16h
