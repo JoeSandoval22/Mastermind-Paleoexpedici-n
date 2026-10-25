@@ -47,7 +47,7 @@ rectColor     db ?
  
 ; Textos del menu
 txtTitulo     db 'VIVOS Y FOSILES$'
-txtSubtitulo  db 'MASTERMIND PREHISTORICO$'
+txtSubtitulo  db 'MASTERMIND PALEOEXPEDICION$'
 txtJugar      db 'JUGAR$'
 txtNivel      db 'NIVEL$'
 txtInstruc    db 'INSTRUCCIONES$'
@@ -132,6 +132,53 @@ LR_Pixel:
     ret
 LlenarRect ENDP
 
+; Este método ayuda a posicionar el cursor en la pantalla.
+PonerCursor PROC
+    push ax
+    push bx
+ 
+    mov ah, 02h
+    mov bh, 0
+    int 10h
+ 
+    pop bx
+    pop ax
+    ret
+PonerCursor ENDP
+
+; Imprime carácter a carácter.
+ImprimirCaracter PROC
+    push ax
+    push bx
+ 
+    mov ah, 0Eh
+    mov bh, 0
+    int 10h
+ 
+    pop bx
+    pop ax
+    ret
+ImprimirCaracter ENDP
+
+; Esta función imprime textos completos del juego, esta depende del método que imprime caracteres de forma individual.
+ImprimirTexto PROC
+    push ax
+    push si
+ 
+IT_Siguiente:
+    mov al, [si]
+    cmp al, '$'
+    je IT_Fin
+    call ImprimirCaracter
+    inc si
+    jmp IT_Siguiente
+ 
+IT_Fin:
+    pop si
+    pop ax
+    ret
+ImprimirTexto ENDP
+
 ; Este método se encuentra a la espera del uso de una tecla, mantiene el control mediante el uso de la interrupción 16h y sus funciones internas
 EsperarTecla PROC
     mov ah, 00h                 
@@ -151,6 +198,13 @@ Inicio:
     mov rectAlto, 80
     mov rectColor, AMARILLO
     call LlenarRect
+
+    mov dh, 3
+    mov dl, 12
+    call PonerCursor
+    lea si, txtTitulo
+    mov bl, AMARILLO
+    call ImprimirTexto
 
     mov ah, 00h
     int 16h
