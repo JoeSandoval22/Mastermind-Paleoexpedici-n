@@ -59,6 +59,8 @@ txtTecla      db 'PRESIONE UNA TECLA$'
 
 .CODE
 
+; MÓDULO DE VIDEO
+
 ; Esta función se encarga de iniciar el programa en modo gráfico una vez que se ejecute el juego. Lo hace por medio de consultas con la función OFh. De esta forma podremos estar en el modo gráfico 13h siempre
 IniciarVideo PROC
     push ax
@@ -132,6 +134,8 @@ LR_Pixel:
     ret
 LlenarRect ENDP
 
+; MÓDULO DE TEXTO
+
 ; Este método ayuda a posicionar el cursor en la pantalla.
 PonerCursor PROC
     push ax
@@ -179,6 +183,96 @@ IT_Fin:
     ret
 ImprimirTexto ENDP
 
+; MÓDULO DE MENU
+
+DibujarFondoMenu PROC
+    push bx
+    push cx
+    push dx
+    push si
+ 
+    ; Cielo
+    mov rectX, 0
+    mov rectY, 0
+    mov rectAncho, 320
+    mov rectAlto, 32
+    mov rectColor, ROJO_CIELO
+    mov cx, 5
+DFM_Franja:
+    call LlenarRect
+    add rectY, 32
+    inc rectColor
+    loop DFM_Franja
+ 
+    ; Suelo
+    mov rectX, 0
+    mov rectY, 160
+    mov rectAncho, 320
+    mov rectAlto, 40
+    mov rectColor, CAFE
+    call LlenarRect
+ 
+    ; Franja del titulo
+    mov rectX, 0
+    mov rectY, 16
+    mov rectAncho, 320
+    mov rectAlto, 32
+    mov rectColor, NEGRO
+    call LlenarRect
+ 
+    ; Recuadro de opciones
+    mov rectX, 86
+    mov rectY, 54
+    mov rectAncho, 148
+    mov rectAlto, 100
+    mov rectColor, DORADO
+    call LlenarRect
+ 
+    mov rectX, 88
+    mov rectY, 56
+    mov rectAncho, 144
+    mov rectAlto, 96
+    mov rectColor, NEGRO
+    call LlenarRect
+ 
+    ; Franja de ayuda
+    mov rectX, 0
+    mov rectY, 172
+    mov rectAncho, 320
+    mov rectAlto, 16
+    mov rectColor, NEGRO
+    call LlenarRect
+ 
+    ; Textos
+    mov dh, 3
+    mov dl, 12
+    call PonerCursor
+    lea si, txtTitulo
+    mov bl, AMARILLO
+    call ImprimirTexto
+ 
+    mov dh, 4
+    mov dl, 8
+    call PonerCursor
+    lea si, txtSubtitulo
+    mov bl, GRIS
+    call ImprimirTexto
+ 
+    mov dh, 22
+    mov dl, 4
+    call PonerCursor
+    lea si, txtAyuda
+    mov bl, BLANCO
+    call ImprimirTexto
+ 
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    ret
+DibujarFondoMenu ENDP
+
+
 ; Este método se encuentra a la espera del uso de una tecla, mantiene el control mediante el uso de la interrupción 16h y sus funciones internas
 EsperarTecla PROC
     mov ah, 00h                 
@@ -192,19 +286,7 @@ Inicio:
     mov ds, ax
 
     call IniciarVideo
-    mov rectX, 100
-    mov rectY, 50
-    mov rectAncho, 120
-    mov rectAlto, 80
-    mov rectColor, AMARILLO
-    call LlenarRect
-
-    mov dh, 3
-    mov dl, 12
-    call PonerCursor
-    lea si, txtTitulo
-    mov bl, AMARILLO
-    call ImprimirTexto
+    call DibujarFondoMenu
 
     mov ah, 00h
     int 16h
