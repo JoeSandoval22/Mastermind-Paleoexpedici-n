@@ -24,6 +24,11 @@ OP_SALIR      EQU 4
 COL_CURSOR    EQU 13
 COL_TEXTO     EQU 15
 
+; Constantes de intentos, espacios, etc.
+VACIO EQU 0FFh
+MAX_POS EQU 5
+MAX_INTENTOS EQU 12
+MAX_ESPECIES EQU 8
 
 ; Macros
 
@@ -53,7 +58,7 @@ rectAncho     dw ?
 rectAlto      dw ?
 rectColor     db ?
  
-; Textos del menu
+; Textos del menu y opciones internas
 txtTitulo     db 'DINOSAURIOS Y FOSILES$'
 txtSubtitulo  db 'MASTERMIND PALEOEXPEDICION$'
 txtJugar      db 'JUGAR$'
@@ -64,9 +69,42 @@ txtSalir      db 'SALIR$'
 txtAyuda      db 'FLECHAS: MOVER    ENTER: ELEGIR$'
 txtObras      db 'EN CONSTRUCCION$'
 txtTecla      db 'PRESIONE UNA TECLA$'
+txtFacil      db 'FACIL$'
+txtNormal     db 'NORMAL$'
+txtDificil    db 'DIFICIL$'
 
 ; Sprites para el juego
 include sprites.inc
+
+; Arreglos
+codigoSecreto  db MAX_POS dup(VACIO)
+intentos       db MAX_POS dup(VACIO)
+histIntentos   db MAX_INTENTOS*MAX_POS dup(VACIO)
+histVivos      db MAX_INTENTOS dup(0)
+histFosiles    db MAX_INTENTOS dup(0)
+especiesUsadas db MAX_ESPECIES dup(0)
+cuentaSecreto  db MAX_ESPECIES dup(0)
+cuentaIntento  db MAX_ESPECIES dup(0)
+
+
+; Reglas por nivel: posiciones, especies, ¿repite?, intentos
+tablaNiveles db 4, 6, 0, 12 ; Fácil
+             db 4, 6, 1, 10 ; Normal
+             db 5, 8, 1, 10 ; Difícil
+
+; Variables selectoras se nivel
+nivel          db 1
+numPos         db ?
+numEspecies    db ?
+permiteRepetir db ?
+intentosNivel  db ?
+
+; Contadores de vivos y fósiles
+vivos   db 0
+fosiles db 0
+
+; Variable encargada de recibir la semilla
+semilla dw 0
 
 .CODE
 
@@ -448,6 +486,189 @@ PantallaPendiente PROC
     pop ax
     ret
 PantallaPendiente ENDP
+
+; Módulo de juego
+
+; Este método permite cargar el nivel de dificultad elegido por el usuario mediante un cálculo sencillo el cual accede a la casilla propia de cada nivel y asigna los valores a la variables, esos valores son las reglas del juego en base a cada dificultad. Posiciones, Especies, ¿Repite?, Intentos.
+; Recibe: nivel (0 = fácil, 1 = normal, 2 = difícil)
+; Devuelve: numPos, numEspecies, permiteRepetir e intentosNivel
+; Destruye: Nada
+CargarNivel PROC 
+    push ax
+    push bx
+
+    mov al, nivel
+    mov bl, 4
+    mul bl
+    mov bx, ax
+
+    mov al, tablaNiveles[bx]
+    mov numPos, al
+    mov al, tablaNiveles[bx+1]
+    mov numEspecies, al
+    mov al, tablaNiveles[bx+2]
+    mov permiteRepetir, al
+    mov al, tablaNiveles[bx+3]
+    mov intentosNivel, al
+
+    pop bx
+    pop ax 
+    ret
+CargarNivel ENDP
+
+; Método encargado de consultar al sistema y leer los tics del reloj interno del procesador por medio de la interrupción de reloj INT 1A y lo guarda, de esta forma semilla puede recibir información distinta siempre, evitando que el código secreto se repita.
+; Recibe: Nada
+; Devuelve: semilla
+; Destruye: Nada
+IniciarSemilla PROC 
+    push ax
+    push cx
+    push dx
+
+    mov ah, 00h
+    int 1Ah
+    mov semilla, dx
+
+    pop dx
+    pop cx
+    pop ax
+
+    ret
+IniciarSemilla ENDP   
+
+; Este método realiza el cálculo necesario para generar números aleatorios con la finalidad de conseguir el código secreto, toma la información guardada en la variable semilla y realiza el cálculo con la fórmula semilla = Anterior * A + B, en donde A = 25173 y B = 13849 lo cual garantiza un recorrido por todos los valores entre 0 y 65535.
+; Recibe: Semilla, BL = maximo (número de especies)
+; Devuelve: AL = numero entre 0 y máximo - 1, actualiza la semilla
+; Destruye: AX
+Aleatorio PROC 
+    push bx
+    push cx
+    push dx
+
+    mov ax, semilla
+    mov cx, 25173
+    mul cx
+    add ax, 13849
+    mov semilla, ax
+
+    mov dx, 0
+    mov bh, 0
+    mul bx
+    mov al, dl
+
+    pop dx
+    pop cx
+    pop bx
+
+    ret
+Aleatorio ENDP
+
+; Recibe: numPos, numEspecies, permiteRepetir
+; Devuelve: codigoSecreto
+; Destruye: Nada
+GenerarSecreto PROC 
+    push ax
+    push bx
+    push cx
+    push si
+
+    call IniciarSemilla
+
+    mov CX, MAX_ESPECIES
+    mov si, 0
+
+CicloLimpiar:
+    mov especiesUsadas[si], 0
+    inc si
+    loop CicloLimpiar
+
+    mov cl, numPos
+    mov ch, 0
+    mov si, 0
+
+CicloSiguiente: 
+    mov bl, numEspecies
+    call Aleatorio
+
+    cmp permiteRepetir, 1
+    je CicloGuardar
+    mov bl, al
+    mov bh, 0
+    cmp especiesUsadas[bx], 1
+    je CicloSiguiente
+    mov especiesUsadas[bx], 1
+
+CicloGuardar:
+    mov codigoSecreto[si], al
+    inc si
+    loop CicloSiguiente
+    
+    pop si
+    pop cx
+    pop bx
+    pop ax
+
+    ret
+GenerarSecreto endp
+
+; Recibe: codigoSecreto, intentos, numPos, numEspecies
+; Devuelve: vivos, fosiles
+; Destruye: Nada
+EvaluarIntento PROC
+    push ax
+    push bx
+    push cx
+    push si
+
+    mov cx, MAX_ESPECIES
+    mov si, 0
+EI_Limpiar:
+    mov cuentaSecreto[si], 0
+    mov cuentaIntento[si], 0
+    inc si
+    loop EI_Limpiar
+
+    mov vivos, 0
+    mov fosiles, 0
+
+    mov cl, numPos
+    mov ch, 0
+    mov si, 0
+EI_Posicion:
+    mov al, codigoSecreto[si]
+    cmp al, intentos[si]
+    jne EI_Sobra
+    inc vivos
+    jmp EI_SiguientePos
+EI_Sobra:
+    mov bl, al
+    mov bh, 0
+    inc cuentaSecreto[bx]
+    mov bl, intentos[si]
+    inc cuentaIntento[bx]
+EI_SiguientePos:
+    inc si
+    loop EI_Posicion
+
+    mov cl, numEspecies
+    mov ch, 0
+    mov bx, 0
+EI_Especie:
+    mov al, cuentaSecreto[bx]
+    cmp al, cuentaIntento[bx]
+    jbe EI_Sumar
+    mov al, cuentaIntento[bx]
+EI_Sumar:
+    add fosiles, al
+    inc bx
+    loop EI_Especie
+
+    pop si
+    pop cx
+    pop bx
+    pop ax
+    ret
+EvaluarIntento ENDP
 
 ; Función principal que vendría siendo el MAIN, llama a los demás métodos que ayudan a iniciar el juego, de momento solo se muestra una pantalla en color azul, esto solo es el esqueleto principal del programa.
 Inicio:
